@@ -1,4 +1,7 @@
 import { useState } from "react";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend
+} from 'recharts';
 import { X, Send, Brain, MessageSquare, User, FileText, Lightbulb } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -58,6 +61,16 @@ export const BriefingModal = ({
     .join('')
     .toUpperCase();
 
+  // Helper to parse the latest insight
+  let latestParsed = null;
+  if (insights.length > 0) {
+    try {
+      latestParsed = typeof insights[0].response === 'string' ? JSON.parse(insights[0].response) : insights[0].response;
+    } catch {
+      latestParsed = null;
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-7xl h-[90vh] glass-card border-glass-border p-0">
@@ -81,7 +94,6 @@ export const BriefingModal = ({
               <X className="w-5 h-5" />
             </Button>
           </div>
-          
           {/* Tab Navigation */}
           <div className="flex space-x-1 mt-4">
             <Button
@@ -102,11 +114,87 @@ export const BriefingModal = ({
             </Button>
           </div>
         </DialogHeader>
+        {/* --- VISUALIZATION PANEL --- */}
+        {activeTab === 'briefing' && latestParsed && typeof latestParsed === 'object' && (
+          <div className="p-6 border-b border-glass-border bg-glass-bg">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+              {/* Sentiment Chart */}
+              {latestParsed.sentimentTimeline && Array.isArray(latestParsed.sentimentTimeline) && (
+                <div>
+                  <div className="font-semibold mb-2">Sentiment Over Time</div>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={latestParsed.sentimentTimeline}>
+                      <XAxis dataKey="date" fontSize={12} />
+                      <YAxis domain={[-1, 1]} fontSize={12} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="sentiment" stroke="#8884d8" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+              {/* Engagement Score */}
+              {typeof latestParsed.engagementScore === 'number' && (
+                <div>
+                  <div className="font-semibold mb-2">Engagement Score</div>
+                  <BarChart width={220} height={180} data={[{ name: 'Engagement', value: latestParsed.engagementScore }]}> 
+                    <XAxis dataKey="name" fontSize={12} />
+                    <YAxis domain={[0, 100]} fontSize={12} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#34d399" />
+                  </BarChart>
+                  <div className="mt-2 text-center text-lg font-bold">{latestParsed.engagementScore}%</div>
+                </div>
+              )}
+              {/* Deal Stage Pie Chart */}
+              {latestParsed.dealStageDistribution && Array.isArray(latestParsed.dealStageDistribution) && (
+                <div>
+                  <div className="font-semibold mb-2">Deal Stage Distribution</div>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <PieChart>
+                      <Pie data={latestParsed.dealStageDistribution} dataKey="value" nameKey="stage" cx="50%" cy="50%" outerRadius={60} label>
+                        {latestParsed.dealStageDistribution.map((entry, idx) => (
+                          <Cell key={`cell-${idx}`} fill={["#6366f1", "#34d399", "#f59e42", "#ef4444"][idx % 4]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+              {/* Risk Score Widget */}
+              {typeof latestParsed.riskScore === 'number' && (
+                <div>
+                  <div className="font-semibold mb-2">Deal Risk Score</div>
+                  <div className="w-full h-8 bg-glass-border rounded flex items-center">
+                    <div style={{ width: `${latestParsed.riskScore}%` }} className="h-8 bg-red-400 rounded"></div>
+                    <span className="ml-2 text-lg font-bold">{latestParsed.riskScore}%</span>
+                  </div>
+                  <div className="text-xs mt-1 text-muted-foreground">Higher = more risk</div>
+                </div>
+              )}
+              {/* Topics Bar Chart */}
+              {latestParsed.topics && Array.isArray(latestParsed.topics) && (
+                <div>
+                  <div className="font-semibold mb-2">Topics Frequency</div>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={latestParsed.topics}>
+                      <XAxis dataKey="topic" fontSize={12} />
+                      <YAxis fontSize={12} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#6366f1" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 flex overflow-hidden">
           {activeTab === 'briefing' ? (
             <div className="flex-1 flex flex-col">
-              {/* Query Interface */}
+              {/* Query Interface (below visualizations) */}
               <div className="p-6 border-b border-glass-border">
                 <form onSubmit={handleSubmit} className="flex space-x-3">
                   <Input
@@ -186,14 +274,72 @@ export const BriefingModal = ({
                           </p>
                         </div>
                       </div>
-                      
-                      <div className="flex items-start space-x-3">
-                        <div className="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center">
-                          <Lightbulb className="w-4 h-4 text-accent" />
-                        </div>
-                        <div className="flex-1 prose prose-sm max-w-none text-foreground">
-                          <div className="whitespace-pre-wrap">{insight.response}</div>
-                        </div>
+                      {/* Structured AI Insight Visualization */}
+                      <div className="flex flex-col gap-4">
+                        {(() => {
+                          let parsed = null;
+                          try {
+                            parsed = typeof insight.response === 'string' ? JSON.parse(insight.response) : insight.response;
+                          } catch {
+                            // fallback to raw string
+                          }
+                          if (!parsed || typeof parsed !== 'object') {
+                            return (
+                              <div className="prose prose-sm max-w-none text-foreground">
+                                <div className="whitespace-pre-wrap">{insight.response}</div>
+                              </div>
+                            );
+                          }
+                          return (
+                            <>
+                              {/* Personality Profile */}
+                              <div>
+                                <div className="font-semibold text-primary mb-1">Personality Profile</div>
+                                <div className="mb-2">{parsed.personalityProfile}</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">Confidence:</span>
+                                  <div className="w-32 h-2 bg-glass-border rounded">
+                                    <div style={{ width: `${(parsed.personalityConfidence || 0) * 100}%` }} className="h-2 bg-primary rounded"></div>
+                                  </div>
+                                  <span className="text-xs">{Math.round((parsed.personalityConfidence || 0) * 100)}%</span>
+                                </div>
+                              </div>
+                              {/* Sales Intelligence */}
+                              <div>
+                                <div className="font-semibold text-primary mb-1">Sales Intelligence</div>
+                                <div className="mb-2">{parsed.salesIntelligence}</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">Confidence:</span>
+                                  <div className="w-32 h-2 bg-glass-border rounded">
+                                    <div style={{ width: `${(parsed.salesIntelligenceConfidence || 0) * 100}%` }} className="h-2 bg-primary rounded"></div>
+                                  </div>
+                                  <span className="text-xs">{Math.round((parsed.salesIntelligenceConfidence || 0) * 100)}%</span>
+                                </div>
+                              </div>
+                              {/* Rapport Builders */}
+                              <div>
+                                <div className="font-semibold text-primary mb-1">Rapport Builders</div>
+                                <div className="mb-2">{parsed.rapportBuilders}</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">Confidence:</span>
+                                  <div className="w-32 h-2 bg-glass-border rounded">
+                                    <div style={{ width: `${(parsed.rapportBuildersConfidence || 0) * 100}%` }} className="h-2 bg-primary rounded"></div>
+                                  </div>
+                                  <span className="text-xs">{Math.round((parsed.rapportBuildersConfidence || 0) * 100)}%</span>
+                                </div>
+                              </div>
+                              {/* Smart Suggestions */}
+                              <div>
+                                <div className="font-semibold text-primary mb-1">Smart Suggestions</div>
+                                <ul className="list-disc pl-5 text-foreground">
+                                  {(parsed.smartSuggestions || []).map((s, i) => (
+                                    <li key={i}>{s}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </Card>
                   ))}

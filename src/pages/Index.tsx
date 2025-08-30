@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 // @ts-ignore
 import.meta.env;
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -26,6 +26,26 @@ const Index = () => {
     setSelectedClient(client);
     setIsBriefingOpen(true);
   };
+
+  // Automatically generate AI insight when opening a client profile if none exists
+  const hasGeneratedInitial = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      isBriefingOpen &&
+      selectedClient &&
+      insights.length === 0 &&
+      !isGenerating &&
+      hasGeneratedInitial.current !== selectedClient.id
+    ) {
+      // Mark as generated for this client to avoid duplicate calls
+      hasGeneratedInitial.current = selectedClient.id;
+      handleGenerateInsight("Give me a full psychological briefing for this client.");
+    }
+    // Reset flag when closing or switching clients
+    if (!isBriefingOpen || !selectedClient) {
+      hasGeneratedInitial.current = null;
+    }
+  }, [isBriefingOpen, selectedClient, insights.length, isGenerating]);
 
   const handleCloseBriefing = () => {
     setIsBriefingOpen(false);
@@ -63,8 +83,11 @@ const Index = () => {
         .map(c => `Type: ${c.type}\nSubject: ${c.subject}\nContent: ${c.content}`)
         .join("\n\n");
 
-      // Prepare prompt
-      const prompt = `You are an expert sales psychologist. Given the following client communications, answer the user's question.\n\nClient Name: ${selectedClient.name}\nCompany: ${selectedClient.company}\nNotes: ${selectedClient.notes || ''}\n\nCommunications:\n${comms}\n\nUser Question: ${query}\n\nAI Insight:`;
+      // Prepare prompt for structured JSON output
+      const prompt = `You are an expert sales psychologist. Given the following client communications, answer the user's question.\n\nClient Name: ${selectedClient.name}\nCompany: ${selectedClient.company}\nNotes: ${selectedClient.notes || ''}\n\nCommunications:\n${comms}\n\nUser Question: ${query}\n\nReturn your answer as a JSON object with the following fields:\n{\n  \"personalityProfile\": string,\n  \"personalityConfidence\": number (0-1),\n  \"salesIntelligence\": string,\n  \"salesIntelligenceConfidence\": number (0-1),\n  \"rapportBuilders\": string,\n  \"rapportBuildersConfidence\": number (0-1),\n  \"smartSuggestions\": string[]\n}`;
+
+      // Debug: log prompt
+      console.debug("[AI DEBUG] Prompt sent to OpenAI:", prompt);
 
       // Call OpenAI API
       const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -77,22 +100,55 @@ const Index = () => {
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
           messages: [
-            { role: "system", content: "You are an expert sales psychologist." },
+            { role: "system", content: "You are an expert sales psychologist. Always return valid JSON only." },
             { role: "user", content: prompt }
           ],
-          max_tokens: 500,
+          max_tokens: 700,
         }),
       });
       if (!response.ok) throw new Error("OpenAI API error");
       const data = await response.json();
-      const aiText = data.choices?.[0]?.message?.content || "No insight generated.";
+      // Debug: log raw OpenAI response
+      console.debug("[AI DEBUG] Raw OpenAI response:", data);
+      let aiText = data.choices?.[0]?.message?.content || "No insight generated.";
+      aiText = aiText.trim().replace(/^```json|```$/g, '').trim();
+      // Debug: log cleaned aiText
+      console.debug("[AI DEBUG] Cleaned aiText:", aiText);
+
+      // Regex-based extraction fallback
+      const extractField = (field) => {
+        const match = aiText.match(new RegExp(`"${field}"\\s*:\\s*("([^\"]*)"|([\\d.]+)|\\[(.*?)\\])`, "s"));
+        if (!match) return null;
+        if (match[2] !== undefined) return match[2]; // string
+        if (match[3] !== undefined) return parseFloat(match[3]); // number
+        if (match[4] !== undefined) {
+          try {
+            return JSON.parse(`[${match[4]}]`);
+          } catch {
+            return [];
+          }
+        }
+        return null;
+      };
+
+      const insightObj = {
+        personalityProfile: extractField("personalityProfile"),
+        personalityConfidence: extractField("personalityConfidence"),
+        salesIntelligence: extractField("salesIntelligence"),
+        salesIntelligenceConfidence: extractField("salesIntelligenceConfidence"),
+        rapportBuilders: extractField("rapportBuilders"),
+        rapportBuildersConfidence: extractField("rapportBuildersConfidence"),
+        smartSuggestions: extractField("smartSuggestions"),
+      };
+      // Debug: log extracted insightObj
+      console.debug("[AI DEBUG] Extracted insightObj:", insightObj);
 
       // Store insight in Supabase
       const { supabase } = await import("@/integrations/supabase/client");
       const { error } = await supabase.from("ai_insights").insert({
         client_id: selectedClient.id,
         query,
-        response: aiText,
+        response: JSON.stringify(insightObj),
       });
       if (error) throw error;
 
@@ -101,6 +157,8 @@ const Index = () => {
         description: "AI psychological briefing generated successfully!",
       });
     } catch (error) {
+      // Debug: log error
+      console.error("[AI DEBUG] Error in handleGenerateInsight:", error);
       toast({
         title: "Error",
         description: "Failed to generate insight. Please try again.",
@@ -132,7 +190,6 @@ const Index = () => {
               AI-powered psychological briefings for every client interaction
             </p>
           </div>
-          
           <div className="flex items-center space-x-3">
             <Link to="/lab">
               <Button variant="outline" size="sm" className="border-dashed">
@@ -141,20 +198,19 @@ const Index = () => {
               </Button>
             </Link>
             
-            {(!clients || clients.length === 0) && (
-              <Button 
-                onClick={handleSeedDatabase}
-                disabled={isSeeding}
-                className="bg-gradient-primary hover:opacity-90"
-              >
-                {isSeeding ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Database className="w-4 h-4 mr-2" />
-                )}
-                Load Sample Data
-              </Button>
-            )}
+            {/* Always show reseed button, with warning if data exists */}
+            <Button 
+              onClick={handleSeedDatabase}
+              disabled={isSeeding}
+              className="bg-gradient-primary hover:opacity-90"
+            >
+              {isSeeding ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Database className="w-4 h-4 mr-2" />
+              )}
+              {clients && clients.length > 0 ? "Reseed Demo Data (Overwrites)" : "Load Sample Data"}
+            </Button>
           </div>
         </div>
 
