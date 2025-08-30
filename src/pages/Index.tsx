@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+// @ts-ignore
+import.meta.env;
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ClientCard } from "@/components/ClientCard";
 import { BriefingModal } from "@/components/BriefingModal";
@@ -52,37 +54,47 @@ const Index = () => {
 
   const handleGenerateInsight = async (query: string) => {
     if (!selectedClient) return;
-    
     setIsGenerating(true);
     try {
-      // Simulate AI analysis for demo
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // In a real app, this would call the Honcho API
-      const mockResponse = `Based on analysis of ${selectedClient.name}'s communications:
+      // Gather recent communications for context
+      const comms = communications
+        .filter(c => c.client_id === selectedClient.id)
+        .map(c => `Type: ${c.type}\nSubject: ${c.subject}\nContent: ${c.content}`)
+        .join("\n\n");
 
-**Personality Profile:**
-- Analytical decision-maker who values data-driven insights
-- Risk-averse and prefers thorough evaluation processes
-- Detail-oriented with strong preference for written documentation
+      // Prepare prompt
+      const prompt = `You are an expert sales psychologist. Given the following client communications, answer the user's question.\n\nClient Name: ${selectedClient.name}\nCompany: ${selectedClient.company}\nNotes: ${selectedClient.notes || ''}\n\nCommunications:\n${comms}\n\nUser Question: ${query}\n\nAI Insight:`;
 
-**Communication Style:**
-- Prefers formal, structured communication
-- Asks detailed technical questions
-- Values transparency and comprehensive information
+      // Call OpenAI API
+      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [
+            { role: "system", content: "You are an expert sales psychologist." },
+            { role: "user", content: prompt }
+          ],
+          max_tokens: 500,
+        }),
+      });
+      if (!response.ok) throw new Error("OpenAI API error");
+      const data = await response.json();
+      const aiText = data.choices?.[0]?.message?.content || "No insight generated.";
 
-**Key Insights:**
-- Shows high interest but needs extensive validation
-- Likely to involve multiple stakeholders in final decision
-- Personal connection points: ${selectedClient.notes}
+      // Store insight in Supabase
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { error } = await supabase.from("ai_insights").insert({
+        client_id: selectedClient.id,
+        query,
+        response: aiText,
+      });
+      if (error) throw error;
 
-**Recommendations:**
-- Provide detailed ROI calculations and case studies
-- Offer multiple customer references
-- Schedule technical deep-dive sessions
-- Follow up with comprehensive written summaries`;
-
-      // Store insight in database (mock for demo)
       toast({
         title: "Analysis Complete",
         description: "AI psychological briefing generated successfully!",
