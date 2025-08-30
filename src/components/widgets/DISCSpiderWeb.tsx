@@ -4,17 +4,20 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DISCProfile, getTypeColor, getTypeDescription } from "@/types/disc";
+import { Info } from "lucide-react";
 
 interface DISCSpiderWebProps {
   profile: DISCProfile;
   size?: number;
   showDetails?: boolean;
+  showExplanation?: boolean;
 }
 
 export const DISCSpiderWeb: React.FC<DISCSpiderWebProps> = ({ 
   profile, 
   size = 300, 
-  showDetails = true 
+  showDetails = true,
+  showExplanation = true
 }) => {
   const [hoveredAxis, setHoveredAxis] = useState<string | null>(null);
   
@@ -91,6 +94,38 @@ export const DISCSpiderWeb: React.FC<DISCSpiderWebProps> = ({
               )}
             </div>
           </CardHeader>
+        )}
+
+        {/* DISC Explanation Box */}
+        {showExplanation && (
+          <div className="px-6 pb-4">
+            <Card className="bg-muted/20 border-dashed">
+              <div className="p-4">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-muted-foreground">DISC Model Explanation</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <span><strong>Dominance:</strong> Direct, decisive leaders who focus on results and control.</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-amber-500" />
+                    <span><strong>Influence:</strong> Enthusiastic, people-oriented communicators who inspire others.</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span><strong>Steadiness:</strong> Patient, reliable team players who value stability and cooperation.</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    <span><strong>Conscientiousness:</strong> Analytical, detail-focused individuals who prioritize quality and precision.</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
         )}
         
         <CardContent className="flex justify-center">

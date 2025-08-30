@@ -7,16 +7,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Beaker, Square, FileText, MessageSquare, Target } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DISCSpiderWeb } from "@/components/widgets/DISCSpiderWeb";
-import { jeffBezosProfile, sampleProfiles, getProfileById } from "@/data/mockProfiles";
+import { 
+  conversationBasedProfiles, 
+  defaultConversationProfile,
+  getConversationProfileById,
+  getCommunicationsForClient
+} from "@/data/conversationProfiles";
 import { DISCProfile } from "@/types/disc";
+import { Communication } from "@/utils/discAnalysis";
 
 const FeatureLab = () => {
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState<DISCProfile>(jeffBezosProfile);
-  const [selectedProfileId, setSelectedProfileId] = useState<string>(jeffBezosProfile.id);
+  const [selectedProfile, setSelectedProfile] = useState<DISCProfile>(defaultConversationProfile);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>(defaultConversationProfile.id);
 
   const handleProfileChange = (profileId: string) => {
-    const profile = getProfileById(profileId);
+    const profile = getConversationProfileById(profileId);
     if (profile) {
       setSelectedProfile(profile);
       setSelectedProfileId(profileId);
@@ -284,7 +290,7 @@ const FeatureLab = () => {
                         <SelectValue placeholder="Select a profile" />
                       </SelectTrigger>
                       <SelectContent>
-                        {sampleProfiles.map((profile) => (
+                        {conversationBasedProfiles.map((profile) => (
                           <SelectItem key={profile.id} value={profile.id}>
                             {profile.name} ({profile.primaryType}-{profile.secondaryType})
                           </SelectItem>
@@ -301,12 +307,12 @@ const FeatureLab = () => {
                       <DISCSpiderWeb profile={selectedProfile} />
                     </div>
 
-                    {/* Widget Information */}
+                    {/* Sources Information */}
                     <div className="space-y-4">
-                      <h4 className="text-lg font-semibold">Widget Details</h4>
+                      <h4 className="text-lg font-semibold">Analysis Sources</h4>
                       
                       <Card className="p-4">
-                        <h5 className="font-medium mb-2">DISC Analysis</h5>
+                        <h5 className="font-medium mb-2">DISC Assessment Results</h5>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span>Primary Type:</span>
@@ -317,32 +323,61 @@ const FeatureLab = () => {
                             <Badge variant="secondary">{selectedProfile.secondaryType}</Badge>
                           </div>
                           <div className="flex justify-between">
-                            <span>Confidence:</span>
+                            <span>Analysis Confidence:</span>
                             <span>{selectedProfile.confidence}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Last Updated:</span>
+                            <span>{new Date(selectedProfile.lastUpdated).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </Card>
 
                       <Card className="p-4">
-                        <h5 className="font-medium mb-2">Component Props</h5>
-                        <div className="text-sm font-mono bg-muted p-3 rounded">
-                          <div>profile: DISCProfile</div>
-                          <div>size?: number = 300</div>
-                          <div>showDetails?: boolean = true</div>
+                        <h5 className="font-medium mb-3">Source Communications</h5>
+                        <div className="space-y-3">
+                          {getCommunicationsForClient(selectedProfile.name).map((comm, index) => (
+                            <div key={index} className="border-l-2 border-muted pl-3">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {comm.type.toUpperCase()}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(comm.date).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <h6 className="text-sm font-medium mb-1">{comm.subject}</h6>
+                              <p className="text-xs text-muted-foreground line-clamp-3">
+                                {comm.content.substring(0, 150)}...
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 text-xs text-muted-foreground">
+                          DISC traits analyzed from {getCommunicationsForClient(selectedProfile.name).length} communications using behavioral pattern recognition.
                         </div>
                       </Card>
 
                       <Card className="p-4">
-                        <h5 className="font-medium mb-2">Features</h5>
-                        <ul className="text-sm space-y-1">
-                          <li>✅ Interactive hover tooltips</li>
-                          <li>✅ Responsive SVG design</li>
-                          <li>✅ Color-coded DISC types</li>
-                          <li>✅ Score visualization</li>
-                          <li>✅ Profile switching</li>
-                          <li>🔄 Animation transitions (planned)</li>
-                          <li>🔄 Export functionality (planned)</li>
-                        </ul>
+                        <h5 className="font-medium mb-2">Analysis Method</h5>
+                        <div className="text-sm space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                            <span>Keyword pattern matching for behavioral indicators</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                            <span>Communication style analysis</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 rounded-full bg-purple-500" />
+                            <span>Decision-making pattern recognition</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 rounded-full bg-orange-500" />
+                            <span>Manual adjustments based on known behavior</span>
+                          </div>
+                        </div>
                       </Card>
                     </div>
                   </div>
