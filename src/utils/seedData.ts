@@ -48,6 +48,59 @@ const sampleClients = [
 ];
 
 const sampleCommunications = [
+  // James Thompson communications
+  {
+    client_name: "James Thompson",
+    type: "call" as const,
+    subject: "Kickoff Call - Implementation Plan",
+    content: `Call Duration: 55 minutes
+Attendees: James Thompson (VP Engineering), Alex (AE), Priya (Implementation Lead)
+
+Transcript:
+James: What’s the expected timeline for full deployment?
+Priya: 4-6 weeks, depending on integration complexity. We’ll provide a detailed project plan.
+James: What resources do you need from our side?
+Priya: A technical lead and access to your staging environment.`,
+    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "James Thompson",
+    type: "email" as const,
+    subject: "Re: Project Plan and Next Steps",
+    content: `Hi James,
+
+Attached is the detailed project plan. Please review and let me know if you have any questions or want to schedule a follow-up call.
+
+Best,
+Alex`,
+    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "James Thompson",
+    type: "call" as const,
+    subject: "Technical Deep Dive",
+    content: `Call Duration: 70 minutes
+Attendees: James Thompson (VP Engineering), Alex (AE), Priya (Lead Engineer)
+
+Transcript:
+James: Can you show us the API documentation and sample code?
+Priya: Absolutely, I’ll send you the docs and a Postman collection.
+James: What about SLAs and uptime guarantees?
+Alex: We offer 99.9% uptime and have a dedicated support team.`,
+    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "James Thompson",
+    type: "message" as const,
+    subject: "Quick question about API limits",
+    content: `Hi Alex,
+
+What are the API rate limits for the enterprise plan?
+
+Thanks,
+James`,
+    date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+  },
   // Sarah Chen communications
   {
     client_name: "Sarah Chen",
@@ -100,6 +153,46 @@ Looking forward to moving forward with the proposal.
 Best regards,
 Alex`,
     date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "Sarah Chen",
+    type: "call" as const,
+    subject: "Technical Deep Dive - Integration",
+    content: `Call Duration: 60 minutes
+Attendees: Sarah Chen (CFO), John Kim (IT Director), Priya Patel (Lead Engineer)
+
+Transcript:
+Sarah: Can you walk us through the integration process with Oracle?
+Priya: Absolutely. We use RESTful APIs and have pre-built connectors for Oracle and SAP. The process typically takes 2-3 weeks.
+John: What about data migration and downtime?
+Priya: We do a staged migration with zero downtime. Our team will provide a detailed migration plan.
+Sarah: That’s great. Can you send over a sample migration plan and references from other Oracle customers?
+Priya: Of course, I’ll email those today.`,
+    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "Sarah Chen",
+    type: "email" as const,
+    subject: "Follow-up: ROI Calculator Attached",
+    content: `Hi Sarah,
+
+Attached is the ROI calculator with industry benchmarks. Please let me know if you have any questions or want to schedule a review session.
+
+Best,
+Alex`,
+    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "Sarah Chen",
+    type: "message" as const,
+    subject: "Quick question about references",
+    content: `Hi Alex,
+
+Can you provide references from other SaaS companies in the healthcare sector?
+
+Thanks,
+Sarah`,
+    date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
   },
 
   // Mike Rodriguez communications
@@ -157,6 +250,44 @@ Mike
 P.S. Shot a 78 at Pebble Beach last weekend! Getting better 😄`,
     date: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
   },
+  {
+    client_name: "Mike Rodriguez",
+    type: "call" as const,
+    subject: "Quarterly Business Review Planning",
+    content: `Call Duration: 40 minutes
+Attendees: Mike Rodriguez (CEO), Alex (AE), Priya (CSM)
+
+Transcript:
+Mike: I want to make sure we’re getting the most out of the platform. What new features are coming next quarter?
+Alex: We’re launching advanced analytics and a new mobile app. I’ll send you the roadmap.
+Mike: Great, and can you connect me with your CTO for a technical deep dive?
+Alex: Absolutely, I’ll set that up.`,
+    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "Mike Rodriguez",
+    type: "email" as const,
+    subject: "Re: Executive Summary Attached",
+    content: `Hi Mike,
+
+Attached is the executive summary you requested. Let me know if you have any questions or want to discuss further.
+
+Best,
+Alex`,
+    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "Mike Rodriguez",
+    type: "message" as const,
+    subject: "Golf at Pebble Beach",
+    content: `Hey Alex,
+
+Let’s schedule a round of golf at Pebble Beach next month. I’ll bring a few friends from the industry.
+
+Cheers,
+Mike`,
+    date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+  },
 
   // Lisa Wang communications
   {
@@ -203,14 +334,76 @@ Lisa Wang
 Director of Procurement
 Enterprise Corp`,
     date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  }
+  },
+  {
+    client_name: "Lisa Wang",
+    type: "call" as const,
+    subject: "Reference Check Call",
+    content: `Call Duration: 35 minutes
+Attendees: Lisa Wang (Procurement Director), Alex (AE), Customer Reference (CIO at MedTech Inc)
+
+Transcript:
+Lisa: Can you share your experience with the implementation process?
+Reference: The team was very professional, and the project was delivered on time. Minimal disruption to our operations.
+Lisa: Any issues with support or product reliability?
+Reference: No major issues. Support is responsive and knowledgeable.
+Lisa: Would you recommend them to other enterprises?
+Reference: Absolutely.`,
+    date: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "Lisa Wang",
+    type: "email" as const,
+    subject: "Request for Implementation Timeline",
+    content: `Hi Alex,
+
+Can you send a detailed implementation timeline with milestones and deliverables? Our executive committee wants to review before final selection.
+
+Thanks,
+Lisa`,
+    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "Lisa Wang",
+    type: "call" as const,
+    subject: "Security Audit Call",
+    content: `Call Duration: 50 minutes
+Attendees: Lisa Wang (Procurement Director), Michael Stevens (Legal), Alex (AE), Priya (Security Lead)
+
+Transcript:
+Lisa: Please walk us through your security protocols and compliance certifications.
+Priya: We are SOC 2 Type II certified, GDPR compliant, and conduct annual penetration testing. I’ll send you the full documentation.
+Michael: What about data residency and privacy?
+Priya: We offer data residency options in the US, EU, and APAC. All data is encrypted at rest and in transit.
+Lisa: Thank you. Please send the documentation and a summary of your incident response plan.`,
+    date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    client_name: "Lisa Wang",
+    type: "message" as const,
+    subject: "Final questions before selection",
+    content: `Hi Alex,
+
+Our committee has a few final questions before we make a decision:
+- Can you confirm 24/7 support response times?
+- What is your escalation process for critical issues?
+- Are there any additional fees for premium support?
+
+Thanks,
+Lisa`,
+    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  },
 ];
 
 export const seedDatabase = async () => {
   try {
     console.log("Starting database seeding...");
 
-    // First, insert clients
+    // Delete all communications and clients first
+    await supabase.from('communications').delete().neq('id', '');
+    await supabase.from('clients').delete().neq('id', '');
+
+    // Insert clients
     const { data: clientsData, error: clientsError } = await supabase
       .from('clients')
       .insert(sampleClients)
