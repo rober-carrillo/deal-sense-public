@@ -7,8 +7,9 @@ import { BriefingModal } from "@/components/BriefingModal";
 import { useClients, useClientCommunications, useClientInsights, Client } from "@/hooks/useClients";
 import { seedDatabase } from "@/utils/seedData";
 import { Button } from "@/components/ui/button";
-import { Database, Loader2 } from "lucide-react";
+import { Database, Loader2, Beaker } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -132,20 +133,29 @@ const Index = () => {
             </p>
           </div>
           
-          {(!clients || clients.length === 0) && (
-            <Button 
-              onClick={handleSeedDatabase}
-              disabled={isSeeding}
-              className="bg-gradient-primary hover:opacity-90"
-            >
-              {isSeeding ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Database className="w-4 h-4 mr-2" />
-              )}
-              Load Sample Data
-            </Button>
-          )}
+          <div className="flex items-center space-x-3">
+            <Link to="/lab">
+              <Button variant="outline" size="sm" className="border-dashed">
+                <Beaker className="w-4 h-4 mr-2" />
+                Feature Lab
+              </Button>
+            </Link>
+            
+            {(!clients || clients.length === 0) && (
+              <Button 
+                onClick={handleSeedDatabase}
+                disabled={isSeeding}
+                className="bg-gradient-primary hover:opacity-90"
+              >
+                {isSeeding ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Database className="w-4 h-4 mr-2" />
+                )}
+                Load Sample Data
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Client Grid */}
