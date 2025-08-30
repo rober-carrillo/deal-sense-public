@@ -3,11 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Beaker, Square, FileText, MessageSquare } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Beaker, Square, FileText, MessageSquare, Target } from "lucide-react";
 import { Link } from "react-router-dom";
+import { DISCSpiderWeb } from "@/components/widgets/DISCSpiderWeb";
+import { jeffBezosProfile, sampleProfiles, getProfileById } from "@/data/mockProfiles";
+import { DISCProfile } from "@/types/disc";
 
 const FeatureLab = () => {
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<DISCProfile>(jeffBezosProfile);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>(jeffBezosProfile.id);
+
+  const handleProfileChange = (profileId: string) => {
+    const profile = getProfileById(profileId);
+    if (profile) {
+      setSelectedProfile(profile);
+      setSelectedProfileId(profileId);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -169,12 +183,72 @@ const FeatureLab = () => {
                   Small interactive components and micro-interactions
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    Widget development area - coming soon
-                  </p>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  {/* DISC Spider Web Widget */}
+                  <Card className="p-4">
+                    <h3 className="font-semibold mb-2 flex items-center">
+                      <Target className="w-4 h-4 mr-2" />
+                      DISC Spider Web
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Behavioral assessment visualization with interactive radar chart
+                    </p>
+                    <Button 
+                      size="sm" 
+                      onClick={() => setActiveFeature('disc-spider-web')}
+                    >
+                      Test Widget
+                    </Button>
+                    <Badge variant="default" className="ml-2">Active</Badge>
+                  </Card>
+
+                  {/* Future Widget Placeholders */}
+                  <Card className="p-4 border-dashed">
+                    <h3 className="font-semibold mb-2">Communication Style Widget</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Real-time communication pattern analysis
+                    </p>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setActiveFeature('communication-widget')}
+                    >
+                      Create Widget
+                    </Button>
+                    <Badge variant="secondary" className="ml-2">Planned</Badge>
+                  </Card>
+
+                  <Card className="p-4 border-dashed">
+                    <h3 className="font-semibold mb-2">Engagement Meter</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Client engagement level indicator
+                    </p>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setActiveFeature('engagement-meter')}
+                    >
+                      Create Widget
+                    </Button>
+                    <Badge variant="secondary" className="ml-2">Planned</Badge>
+                  </Card>
+
+                  <Card className="p-4 border-dashed">
+                    <h3 className="font-semibold mb-2">Mood Timeline</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Emotional state tracking over time
+                    </p>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setActiveFeature('mood-timeline')}
+                    >
+                      Create Widget
+                    </Button>
+                    <Badge variant="secondary" className="ml-2">Planned</Badge>
+                  </Card>
                 </div>
               </CardContent>
             </Card>
@@ -186,7 +260,10 @@ const FeatureLab = () => {
           <Card className="mt-8">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Development: {activeFeature}</CardTitle>
+                <CardTitle className="flex items-center space-x-2">
+                  {activeFeature === 'disc-spider-web' && <Target className="w-5 h-5" />}
+                  <span>Development: {activeFeature}</span>
+                </CardTitle>
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -197,16 +274,91 @@ const FeatureLab = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="min-h-[400px] bg-muted/20 rounded-lg p-8 flex items-center justify-center">
-                <div className="text-center">
-                  <Beaker className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">Component Development Area</h3>
-                  <p className="text-muted-foreground max-w-md">
-                    This is your isolated development space for <strong>{activeFeature}</strong>. 
-                    Build and test your component here without affecting the main application.
-                  </p>
+              {activeFeature === 'disc-spider-web' ? (
+                <div className="space-y-6">
+                  {/* Profile Selector */}
+                  <div className="flex items-center space-x-4">
+                    <label className="text-sm font-medium">Test Profile:</label>
+                    <Select value={selectedProfileId} onValueChange={handleProfileChange}>
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Select a profile" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sampleProfiles.map((profile) => (
+                          <SelectItem key={profile.id} value={profile.id}>
+                            {profile.name} ({profile.primaryType}-{profile.secondaryType})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* DISC Widget Demo */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Widget Preview */}
+                    <div>
+                      <h4 className="text-lg font-semibold mb-4">Widget Preview</h4>
+                      <DISCSpiderWeb profile={selectedProfile} />
+                    </div>
+
+                    {/* Widget Information */}
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold">Widget Details</h4>
+                      
+                      <Card className="p-4">
+                        <h5 className="font-medium mb-2">DISC Analysis</h5>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Primary Type:</span>
+                            <Badge variant="outline">{selectedProfile.primaryType}</Badge>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Secondary Type:</span>
+                            <Badge variant="secondary">{selectedProfile.secondaryType}</Badge>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Confidence:</span>
+                            <span>{selectedProfile.confidence}%</span>
+                          </div>
+                        </div>
+                      </Card>
+
+                      <Card className="p-4">
+                        <h5 className="font-medium mb-2">Component Props</h5>
+                        <div className="text-sm font-mono bg-muted p-3 rounded">
+                          <div>profile: DISCProfile</div>
+                          <div>size?: number = 300</div>
+                          <div>showDetails?: boolean = true</div>
+                        </div>
+                      </Card>
+
+                      <Card className="p-4">
+                        <h5 className="font-medium mb-2">Features</h5>
+                        <ul className="text-sm space-y-1">
+                          <li>✅ Interactive hover tooltips</li>
+                          <li>✅ Responsive SVG design</li>
+                          <li>✅ Color-coded DISC types</li>
+                          <li>✅ Score visualization</li>
+                          <li>✅ Profile switching</li>
+                          <li>🔄 Animation transitions (planned)</li>
+                          <li>🔄 Export functionality (planned)</li>
+                        </ul>
+                      </Card>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="min-h-[400px] bg-muted/20 rounded-lg p-8 flex items-center justify-center">
+                  <div className="text-center">
+                    <Beaker className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">Component Development Area</h3>
+                    <p className="text-muted-foreground max-w-md">
+                      This is your isolated development space for <strong>{activeFeature}</strong>. 
+                      Build and test your component here without affecting the main application.
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
