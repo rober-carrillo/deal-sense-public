@@ -19,7 +19,7 @@ const Index = () => {
   const { toast } = useToast();
 
   const { data: clients, isLoading: clientsLoading } = useClients();
-  const { data: communications = [] } = useClientCommunications(selectedClient?.id || "");
+  const { data: communications = [], refetch: refetchCommunications } = useClientCommunications(selectedClient?.id || "");
   const { data: insights = [] } = useClientInsights(selectedClient?.id || "");
 
   const handleClientClick = (client: Client) => {
@@ -248,6 +248,7 @@ const Index = () => {
           insights={insights}
           onGenerateInsight={handleGenerateInsight}
           isGenerating={isGenerating}
+          refreshData={() => refetchCommunications()}
         />
       </div>
     </DashboardLayout>

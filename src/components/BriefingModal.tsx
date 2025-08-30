@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
-import { X, Send, Brain, MessageSquare, User, FileText, Lightbulb } from "lucide-react";
+import { X, Send, Brain, MessageSquare, User, FileText, Lightbulb, Target, Upload } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Client, Communication, AIInsight } from "@/hooks/useClients";
+import { DISCSpiderWeb } from "@/components/widgets/DISCSpiderWeb";
+import { generateDISCProfileFromCommunications } from "@/utils/discAnalysis";
+import { Communication as DISCCommunication } from "@/utils/discAnalysis";
+import { getTypeColor } from "@/types/disc";
+import { TranscriptUploader } from "@/components/TranscriptUploader";
 
 interface BriefingModalProps {
   client: Client | null;
@@ -19,6 +24,7 @@ interface BriefingModalProps {
   insights: AIInsight[];
   onGenerateInsight: (query: string) => Promise<void>;
   isGenerating: boolean;
+  refreshData?: () => void;
 }
 
 const sampleQueries = [
@@ -36,10 +42,12 @@ export const BriefingModal = ({
   communications,
   insights,
   onGenerateInsight,
-  isGenerating
+  isGenerating,
+  refreshData
 }: BriefingModalProps) => {
   const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<'briefing' | 'communications'>('briefing');
+  const [activeTab, setActiveTab] = useState<'briefing' | 'communications' | 'disc'>('briefing');
+  const [showTranscriptUploader, setShowTranscriptUploader] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +59,13 @@ export const BriefingModal = ({
 
   const handleQuickQuery = (quickQuery: string) => {
     onGenerateInsight(quickQuery);
+  };
+
+  const handleUploadComplete = () => {
+    setShowTranscriptUploader(false);
+    if (refreshData) {
+      refreshData();
+    }
   };
 
   if (!client) return null;
@@ -90,9 +105,20 @@ export const BriefingModal = ({
                 <p className="text-muted-foreground">{client.company}</p>
               </div>
             </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTranscriptUploader(true)}
+                className="flex items-center space-x-2"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Upload Transcript</span>
+              </Button>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="w-5 h-5" />
             </Button>
+            </div>
           </div>
           {/* Tab Navigation */}
           <div className="flex space-x-1 mt-4">
@@ -111,6 +137,14 @@ export const BriefingModal = ({
             >
               <MessageSquare className="w-4 h-4" />
               <span>Raw Communications</span>
+            </Button>
+            <Button
+              variant={activeTab === 'disc' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('disc')}
+              className="flex items-center space-x-2"
+            >
+              <Target className="w-4 h-4" />
+              <span>DISC Profile</span>
             </Button>
           </div>
         </DialogHeader>
@@ -193,8 +227,170 @@ export const BriefingModal = ({
 
         <div className="flex-1 flex overflow-hidden">
           {activeTab === 'briefing' ? (
-            <div className="flex-1 flex flex-col">
-              {/* Query Interface (below visualizations) */}
+            <div className="flex-1">
+              <ScrollArea className="h-full">
+                {/* DISC Profile Widget */}
+                <div className="p-6 border-b border-glass-border">
+                {(() => {
+                  // Convert communications to DISC format
+                  const discCommunications: DISCCommunication[] = communications.map(comm => ({
+                    client_name: client?.name || '',
+                    type: comm.type as 'call' | 'email' | 'message',
+                    subject: comm.subject || '',
+                    content: comm.content,
+                    date: comm.date
+                  }));
+
+                  if (discCommunications.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                        <h3 className="text-lg font-medium text-muted-foreground">DISC Analysis Unavailable</h3>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Load sample data to enable behavioral analysis
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  // Generate DISC profile from communications
+                  const discProfile = generateDISCProfileFromCommunications(
+                    client?.name || 'Unknown Client',
+                    discCommunications
+                  );
+
+                  // Add avatar from client data
+                  discProfile.avatar = client?.avatar_url;
+
+                  return (
+                    <div className="w-full">
+                      {/* DISC Widget with Full Analysis like Feature Lab */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Widget Preview */}
+                        <div>
+                          <h4 className="text-lg font-semibold mb-4">DISC Behavioral Analysis</h4>
+                          <DISCSpiderWeb 
+                            profile={discProfile} 
+                            size={300}
+                            showDetails={true}
+                            showExplanation={true}
+                          />
+                        </div>
+
+                        {/* Analysis Sources */}
+                        <div className="space-y-4">
+                          <h4 className="text-lg font-semibold">Analysis Sources</h4>
+                          
+                          <Card className="p-4">
+                            <h5 className="font-medium mb-2">DISC Assessment Results</h5>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span>Primary Type:</span>
+                                <span className="font-mono font-bold" style={{ color: getTypeColor(discProfile.primaryType) }}>
+                                  {discProfile.primaryType}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Secondary Type:</span>
+                                <span className="font-mono font-bold" style={{ color: discProfile.secondaryType ? getTypeColor(discProfile.secondaryType) : undefined }}>
+                                  {discProfile.secondaryType || 'N/A'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Analysis Confidence:</span>
+                                <span className="font-bold">{discProfile.confidence}%</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Last Updated:</span>
+                                <span>{new Date(discProfile.lastUpdated).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </Card>
+
+                          <Card className="p-4">
+                            <h5 className="font-medium mb-3">Source Communications</h5>
+                            <div className="space-y-3 max-h-48 overflow-y-auto">
+                              {communications.map((comm, index) => (
+                                <div key={index} className="border-l-2 border-muted pl-3">
+                                  <div className="flex items-center space-x-2 mb-1">
+                                    <div className={`px-2 py-1 rounded text-xs font-medium ${
+                                      comm.type === 'email' ? 'bg-blue-500/20 text-blue-400' :
+                                      comm.type === 'call' ? 'bg-green-500/20 text-green-400' :
+                                      comm.type === 'meeting' ? 'bg-purple-500/20 text-purple-400' :
+                                      'bg-gray-500/20 text-gray-400'
+                                    }`}>
+                                      {comm.type.toUpperCase()}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(comm.date).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <h6 className="text-sm font-medium mb-1">{comm.subject}</h6>
+                                  <p className="text-xs text-muted-foreground line-clamp-2">
+                                    {comm.content.substring(0, 120)}...
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+                              DISC traits analyzed from <strong>{communications.length}</strong> communications using behavioral pattern recognition.
+                            </div>
+                          </Card>
+
+                          <Card className="p-4">
+                            <h5 className="font-medium mb-2">Analysis Method</h5>
+                            <div className="text-sm space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                <span>Keyword pattern matching for behavioral indicators</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 rounded-full bg-green-500" />
+                                <span>Communication style analysis</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                <span>Decision-making pattern recognition</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 rounded-full bg-orange-500" />
+                                <span>Manual adjustments based on known behavior</span>
+                              </div>
+                            </div>
+                          </Card>
+
+                          {/* DISC Scores Breakdown */}
+                          <Card className="p-4">
+                            <h5 className="font-medium mb-3">DISC Score Breakdown</h5>
+                            <div className="space-y-2">
+                              {[
+                                { type: 'D', label: 'Dominance', score: discProfile.scores.dominance, color: '#ef4444' },
+                                { type: 'I', label: 'Influence', score: discProfile.scores.influence, color: '#f59e0b' },
+                                { type: 'S', label: 'Steadiness', score: discProfile.scores.steadiness, color: '#22c55e' },
+                                { type: 'C', label: 'Conscientiousness', score: discProfile.scores.conscientiousness, color: '#3b82f6' }
+                              ].map((item) => (
+                                <div key={item.type} className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2">
+                                    <div 
+                                      className="w-3 h-3 rounded-full" 
+                                      style={{ backgroundColor: item.color }}
+                                    />
+                                    <span className="text-sm font-medium">{item.type}</span>
+                                    <span className="text-sm text-muted-foreground">{item.label}</span>
+                                  </div>
+                                  <span className="text-sm font-mono font-bold">{item.score}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </Card>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+              
+              {/* Query Interface (below DISC widget) */}
               <div className="p-6 border-b border-glass-border">
                 <form onSubmit={handleSubmit} className="flex space-x-3">
                   <Input
@@ -235,8 +431,7 @@ export const BriefingModal = ({
               </div>
 
               {/* Insights Display */}
-              <ScrollArea className="flex-1 p-6">
-                <div className="space-y-6">
+                <div className="p-6 space-y-6">
                   {insights.length === 0 && !isGenerating && (
                     <div className="text-center py-12">
                       <Brain className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
@@ -346,7 +541,7 @@ export const BriefingModal = ({
                 </div>
               </ScrollArea>
             </div>
-          ) : (
+          ) : activeTab === 'communications' ? (
             /* Communications Tab */
             <div className="flex-1">
               <ScrollArea className="h-full p-6">
@@ -389,8 +584,74 @@ export const BriefingModal = ({
                 </div>
               </ScrollArea>
             </div>
-          )}
+          ) : activeTab === 'disc' ? (
+            /* DISC Profile Tab */
+            <div className="flex-1">
+              <ScrollArea className="h-full p-6">
+                {(() => {
+                  // Convert communications to DISC format
+                  const discCommunications: DISCCommunication[] = communications.map(comm => ({
+                    client_name: client?.name || '',
+                    type: comm.type as 'call' | 'email' | 'message',
+                    subject: comm.subject || '',
+                    content: comm.content,
+                    date: comm.date
+                  }));
+
+                  if (discCommunications.length === 0) {
+                    return (
+                      <div className="text-center py-12">
+                        <Target className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                        <h3 className="text-lg font-medium text-muted-foreground">DISC Analysis Unavailable</h3>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Load sample data to enable behavioral analysis
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  // Generate DISC profile from communications
+                  const discProfile = generateDISCProfileFromCommunications(
+                    client?.name || 'Unknown Client',
+                    discCommunications
+                  );
+
+                  // Add avatar from client data
+                  discProfile.avatar = client?.avatar_url;
+
+                  return (
+                    <div className="max-w-4xl mx-auto">
+                      <DISCSpiderWeb 
+                        profile={discProfile} 
+                        showDetails={true}
+                        showExplanation={true}
+                      />
+                    </div>
+                  );
+                })()}
+              </ScrollArea>
+            </div>
+          ) : null}
         </div>
+
+        {/* Transcript Uploader Modal Overlay */}
+        {showTranscriptUploader && client && (
+          <div 
+            className="absolute inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowTranscriptUploader(false)}
+          >
+            <div 
+              className="glass-card border-glass-border shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <TranscriptUploader
+                clientId={client.id}
+                onUploadComplete={handleUploadComplete}
+                onClose={() => setShowTranscriptUploader(false)}
+              />
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
