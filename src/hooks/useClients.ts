@@ -43,12 +43,22 @@ export const useClients = () => {
   return useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
+      console.log("🔍 Fetching clients from database...");
+      
       const { data, error } = await supabase
         .from('clients')
         .select('*')
         .order('last_contact', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Error fetching clients:", error);
+        throw error;
+      }
+      
+      console.log("✅ Clients fetched successfully!");
+      console.log("📊 Number of clients:", data?.length || 0);
+      console.log("👥 Client names:", data?.map(c => c.name) || []);
+      
       return data as Client[];
     },
   });
@@ -75,13 +85,23 @@ export const useClientCommunications = (clientId: string) => {
   return useQuery({
     queryKey: ['communications', clientId],
     queryFn: async () => {
+      console.log(`🔍 Fetching communications for client: ${clientId}`);
+      
       const { data, error } = await supabase
         .from('communications')
         .select('*')
         .eq('client_id', clientId)
         .order('date', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Error fetching communications:", error);
+        throw error;
+      }
+      
+      console.log("✅ Communications fetched successfully!");
+      console.log(`📊 Number of communications for client ${clientId}:`, data?.length || 0);
+      console.log("💬 Communication types:", data?.map(c => c.type) || []);
+      
       return data as Communication[];
     },
     enabled: !!clientId,

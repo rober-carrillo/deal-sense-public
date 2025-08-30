@@ -17,7 +17,7 @@ const sampleClients = [
     company: "StartupX",
     email: "mike@startupx.co",
     phone: "+1 (555) 987-6543",
-    status: "hot_lead" as const,
+    status: "prospect" as const,  // Changed from "hot_lead" to "prospect"
     deal_value: 120000,
     avatar_url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
     last_contact: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
@@ -39,7 +39,7 @@ const sampleClients = [
     company: "InnovateCorp",
     email: "j.thompson@innovate.com",
     phone: "+1 (555) 321-9876",
-    status: "closed_won" as const,
+    status: "active" as const,  // Changed from "closed_won" to "active"
     deal_value: 85000,
     avatar_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
     last_contact: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
@@ -395,41 +395,170 @@ Lisa`,
   },
 ];
 
+export const checkDatabaseStatus = async () => {
+  try {
+    console.log("🔍 Checking database status...");
+    
+    // Check clients table
+    const { data: clients, error: clientsError, count: clientCount } = await supabase
+      .from('clients')
+      .select('*', { count: 'exact' });
+    
+    if (clientsError) {
+      console.error("❌ Error checking clients:", clientsError);
+    } else {
+      console.log("👥 Clients in database:", clientCount);
+      console.log("📋 Client data:", clients?.map(c => ({ name: c.name, id: c.id })));
+    }
+    
+    // Check communications table
+    const { data: communications, error: commsError, count: commsCount } = await supabase
+      .from('communications')
+      .select('*', { count: 'exact' });
+    
+    if (commsError) {
+      console.error("❌ Error checking communications:", commsError);
+    } else {
+      console.log("💬 Communications in database:", commsCount);
+      
+      // Group by client
+      if (communications) {
+        const commsByClient = communications.reduce((acc, comm) => {
+          acc[comm.client_id] = (acc[comm.client_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        console.log("📊 Communications per client ID:", commsByClient);
+      }
+    }
+    
+    // Check ai_insights table
+    const { data: insights, error: insightsError, count: insightsCount } = await supabase
+      .from('ai_insights')
+      .select('*', { count: 'exact' });
+    
+    if (insightsError) {
+      console.error("❌ Error checking insights:", insightsError);
+    } else {
+      console.log("🧠 AI insights in database:", insightsCount);
+    }
+    
+    return {
+      clients: clientCount || 0,
+      communications: commsCount || 0,
+      insights: insightsCount || 0
+    };
+    
+  } catch (error) {
+    console.error("💥 Error checking database status:", error);
+    return null;
+  }
+};
+
 export const seedDatabase = async () => {
   try {
-    console.log("Starting database seeding...");
+    console.log("🌱 Starting database seeding...");
+    console.log("🔢 Sample clients to insert:", sampleClients.length);
+    console.log("💬 Sample communications to insert:", sampleCommunications.length);
 
-    // Delete all communications and clients first
-    await supabase.from('communications').delete().neq('id', '');
-    await supabase.from('clients').delete().neq('id', '');
+    // Delete existing data first with detailed logging
+    console.log("🗑️ Clearing existing data...");
+    
+    const { error: deleteCommsError } = await supabase
+      .from('communications')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+    
+    if (deleteCommsError) {
+      console.error("❌ Error deleting communications:", deleteCommsError);
+    } else {
+      console.log("✅ Communications table cleared");
+    }
 
-    // Insert clients
+    const { error: deleteClientsError } = await supabase
+      .from('clients')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+    
+    if (deleteClientsError) {
+      console.error("❌ Error deleting clients:", deleteClientsError);
+    } else {
+      console.log("✅ Clients table cleared");
+    }
+
+    // Insert clients with detailed logging
+    console.log("👥 Inserting clients...");
+    console.log("📋 Client data to insert:", sampleClients.map(c => ({ name: c.name, status: c.status })));
+    
     const { data: clientsData, error: clientsError } = await supabase
       .from('clients')
       .insert(sampleClients)
       .select();
 
     if (clientsError) {
-      console.error("Error inserting clients:", clientsError);
+      console.error("❌ Error inserting clients:", clientsError);
+      console.error("📋 Client data that failed:", sampleClients);
       return;
     }
 
-    console.log("Clients inserted successfully:", clientsData);
+    console.log("✅ Clients inserted successfully!");
+    console.log("📊 Inserted clients count:", clientsData?.length || 0);
+    console.log("👥 Client IDs:", clientsData?.map(c => ({ name: c.name, id: c.id })));
 
     // Create a mapping of client names to IDs
     const clientNameToId: Record<string, string> = {};
-    clientsData.forEach(client => {
-      clientNameToId[client.name] = client.id;
-    });
+    if (clientsData) {
+      clientsData.forEach(client => {
+        clientNameToId[client.name] = client.id;
+      });
+    }
 
-    // Insert communications with correct client IDs
-    const communicationsWithIds = sampleCommunications.map(comm => ({
-      client_id: clientNameToId[comm.client_name],
-      type: comm.type,
-      subject: comm.subject,
-      content: comm.content,
-      date: comm.date
-    }));
+    console.log("🗺️ Client name to ID mapping:", clientNameToId);
+
+    // Insert communications with correct client IDs and schema-compliant fields
+    console.log("💬 Preparing communications data...");
+    console.log("🗺️ Client name to ID mapping:", clientNameToId);
+    console.log("📝 Available client names in mapping:", Object.keys(clientNameToId));
+    console.log("📋 Sample communications client names:", [...new Set(sampleCommunications.map(c => c.client_name))]);
+    
+    const communicationsWithIds = sampleCommunications.map((comm, index) => {
+      const clientId = clientNameToId[comm.client_name];
+      
+      if (!clientId) {
+        console.warn(`⚠️ No client ID found for: "${comm.client_name}"`);
+        console.warn(`📋 Available client names:`, Object.keys(clientNameToId));
+      } else {
+        console.log(`✅ Mapping "${comm.client_name}" to ID: ${clientId}`);
+      }
+
+      // Generate summary from content (first 100 chars)
+      const summary = comm.content.length > 100 
+        ? comm.content.substring(0, 97) + "..."
+        : comm.content;
+
+      // Create metadata object with additional info
+      const metadata = {
+        client_name: comm.client_name,
+        communication_index: index,
+        content_length: comm.content.length,
+        has_transcript: comm.content.includes('Transcript:'),
+        is_follow_up: comm.subject.toLowerCase().includes('follow-up') || comm.subject.toLowerCase().includes('re:')
+      };
+
+      return {
+        client_id: clientId,
+        type: comm.type,
+        subject: comm.subject,
+        content: comm.content,
+        summary: summary,
+        date: comm.date,
+        metadata: metadata
+      };
+    }).filter(comm => comm.client_id); // Filter out communications without valid client IDs
+
+    console.log("📝 Communications prepared:", communicationsWithIds.length);
+    console.log("🚫 Communications filtered out (no client ID):", sampleCommunications.length - communicationsWithIds.length);
+    console.log("🔍 Sample communication structure:", communicationsWithIds[0]);
 
     const { data: commsData, error: commsError } = await supabase
       .from('communications')
@@ -437,14 +566,35 @@ export const seedDatabase = async () => {
       .select();
 
     if (commsError) {
-      console.error("Error inserting communications:", commsError);
+      console.error("❌ Error inserting communications:", commsError);
+      console.error("📋 Communications data that failed:", communicationsWithIds);
       return;
     }
 
-    console.log("Communications inserted successfully:", commsData);
-    console.log("Database seeding completed successfully!");
+    console.log("✅ Communications inserted successfully!");
+    console.log("📊 Inserted communications count:", commsData?.length || 0);
+    
+    // Log communications per client
+    if (commsData) {
+      const commsByClient = commsData.reduce((acc, comm) => {
+        const clientName = communicationsWithIds.find(c => c.client_id === comm.client_id)?.metadata?.client_name || 'Unknown';
+        acc[clientName] = (acc[clientName] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      console.log("📈 Communications per client:", commsByClient);
+    }
+
+    console.log("🎉 Database seeding completed successfully!");
+    console.log("📋 Summary:");
+    console.log(`   - Clients: ${clientsData?.length || 0}`);
+    console.log(`   - Communications: ${commsData?.length || 0}`);
 
   } catch (error) {
-    console.error("Error seeding database:", error);
+    console.error("💥 Error seeding database:", error);
+    if (error instanceof Error) {
+      console.error("📝 Error message:", error.message);
+      console.error("📚 Error stack:", error.stack);
+    }
   }
 };
