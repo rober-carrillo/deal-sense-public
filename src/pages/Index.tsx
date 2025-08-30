@@ -5,10 +5,16 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { ClientCard } from "@/components/ClientCard";
 import { BriefingModal } from "@/components/BriefingModal";
 import { useClients, useClientCommunications, useClientInsights, Client } from "@/hooks/useClients";
+import { useBillingFeatures } from "@/hooks/useBillingFeatures";
+import { trackUsage } from "@/utils/billing";
 import { seedDatabase, checkDatabaseStatus } from "@/utils/seedData";
 import { Button } from "@/components/ui/button";
-import { Database, Loader2, Sparkles, Zap, Users, Brain, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Database, Loader2, Sparkles, Zap, Users, Brain, TrendingUp, Crown, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -16,6 +22,16 @@ const Index = () => {
   const [isSeeding, setIsSeeding] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  
+  // Billing features
+  const { 
+    features, 
+    canUseFeature, 
+    getUsagePercentage, 
+    currentPlan, 
+    isSubscribed 
+  } = useBillingFeatures();
 
   // Debug: Log environment variables on component mount
   useEffect(() => {
@@ -110,6 +126,17 @@ const Index = () => {
 
   const handleGenerateInsight = async (query: string) => {
     if (!selectedClient) return;
+    
+    // Check if user can use AI features
+    if (!canUseFeature('aiChat')) {
+      toast({
+        title: "Feature Locked",
+        description: "AI insights are available in Pro and Enterprise plans. Upgrade to unlock unlimited AI-powered analysis.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsGenerating(true);
     try {
       console.debug("[AI DEBUG] Starting insight generation for client:", selectedClient.name);
@@ -264,6 +291,9 @@ Provide a helpful, detailed response that gives actionable sales advice. Be conv
       });
       if (error) throw error;
 
+      // Track usage for billing
+      await trackUsage('ai_insight_generation', 1);
+
       toast({
         title: "Analysis Complete",
         description: "AI psychological briefing generated successfully!",
@@ -314,6 +344,14 @@ Provide a helpful, detailed response that gives actionable sales advice. Be conv
               Transform scattered client data into actionable psychological insights. 
               Get personality-driven briefings in seconds, not hours.
             </p>
+            
+            {/* Welcome message for signed-in user */}
+            <div className="bg-success/10 border border-success/20 rounded-lg p-4 max-w-md mx-auto">
+              <div className="flex items-center justify-center gap-2 text-success">
+                <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium">You're signed in and ready to go!</span>
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-col items-center space-y-4">
@@ -390,6 +428,73 @@ Provide a helpful, detailed response that gives actionable sales advice. Be conv
               <div className="text-sm text-muted-foreground">Insight Generation</div>
             </div>
           </div>
+        )}
+
+        {/* Billing Usage Card */}
+        {clients && clients.length > 0 && (
+          <Card className="mb-8">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-primary" />
+                  <CardTitle className="text-lg">Usage & Plan</CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={isSubscribed ? "default" : "secondary"}>
+                    {currentPlan}
+                  </Badge>
+                  {!isSubscribed && (
+                    <Button 
+                      size="sm" 
+                      onClick={() => navigate('/billing')}
+                      className="text-xs"
+                    >
+                      Upgrade
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Clients ({clients.length}/{features.maxClients === Infinity ? '∞' : features.maxClients})</span>
+                    <span>{getUsagePercentage(clients.length, 'maxClients').toFixed(0)}%</span>
+                  </div>
+                  <Progress 
+                    value={getUsagePercentage(clients.length, 'maxClients')} 
+                    className="h-2"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>AI Insights</span>
+                    {canUseFeature('aiChat') ? (
+                      <span className="text-green-600">Unlimited</span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        <span>Locked</span>
+                      </div>
+                    )}
+                  </div>
+                  <Progress 
+                    value={canUseFeature('aiChat') ? 100 : 0} 
+                    className="h-2"
+                  />
+                </div>
+              </div>
+              
+              {!canUseFeature('aiChat') && (
+                <div className="bg-muted/50 p-3 rounded-lg border border-border/50">
+                  <p className="text-sm text-muted-foreground">
+                    Upgrade to unlock unlimited AI insights, advanced analytics, and more features.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* Client Portfolio Section */}

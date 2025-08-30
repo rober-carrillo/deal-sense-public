@@ -1,13 +1,26 @@
-import { ReactNode } from "react";
-import { Sparkles, Zap, TrendingUp, Search, Bell, Settings } from "lucide-react";
+import { ReactNode, useEffect, useState } from "react";
+import { Sparkles, Zap, TrendingUp, Search, Bell, Settings, CreditCard, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { getCurrentUser } from "@/lib/flowglad";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    };
+    loadUser();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Ultra-Modern Header */}
@@ -57,6 +70,16 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <div className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full"></div>
               </Button>
               
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="p-2"
+                onClick={() => navigate('/billing')}
+                title="Billing"
+              >
+                <CreditCard className="w-4 h-4" />
+              </Button>
+              
               <Button variant="ghost" size="sm" className="p-2">
                 <Settings className="w-4 h-4" />
               </Button>
@@ -64,9 +87,28 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               {/* User Avatar */}
               <div className="relative group">
                 <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg group-hover:shadow-glow transition-all duration-300 cursor-pointer">
-                  U
+                  {currentUser?.user_metadata?.avatar_url ? (
+                    <img 
+                      src={currentUser.user_metadata.avatar_url} 
+                      alt={currentUser.user_metadata?.full_name || currentUser.email}
+                      className="w-full h-full rounded-xl object-cover"
+                    />
+                  ) : (
+                    <User className="w-5 h-5" />
+                  )}
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-success border-2 border-background rounded-full"></div>
+                
+                {/* User tooltip */}
+                {currentUser && (
+                  <div className="absolute top-12 right-0 bg-background border border-border rounded-lg p-3 shadow-lg min-w-48 opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                    <p className="font-medium text-sm">{currentUser.user_metadata?.full_name || 'Demo User'}</p>
+                    <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+                    <div className="mt-2 pt-2 border-t border-border">
+                      <p className="text-xs text-success">● Online</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
