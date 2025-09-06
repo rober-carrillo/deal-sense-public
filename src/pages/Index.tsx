@@ -36,7 +36,6 @@ const Index = () => {
   // Debug: Log environment variables on component mount
   useEffect(() => {
     console.debug("[ENV DEBUG] VITE_OPENAI_API_KEY exists:", !!import.meta.env.VITE_OPENAI_API_KEY);
-    console.debug("[ENV DEBUG] VITE_OPENAI_API_KEY prefix:", import.meta.env.VITE_OPENAI_API_KEY?.substring(0, 10));
   }, []);
 
   const { data: clients, isLoading: clientsLoading } = useClients();
